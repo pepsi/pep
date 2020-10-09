@@ -1,4 +1,2 @@
-dev: src/main.rs index.html 
-	cargo run > index.wat
-	wat2wasm index.wat -o index.wasm
-	wasm-opt index.wasm -O3 -o final.wasm
+dev: src/main.rs index.html
+	python3 -m http.server 8000 & nodemon --exec "cargo run > a.wat && wat2wasm a.wat || exit 1" -e "\html,js,rs"

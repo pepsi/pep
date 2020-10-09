@@ -9,12 +9,12 @@ enum Value {
     Float(f32),
     Double(f64),
 }
-enum Dype {
-    Int,
-    Long,
-    Float,
-    Double,
-}
+// enum Dype {
+//     Int,
+//     Long,
+//     Float,
+//     Double,
+// }
 #[derive(Debug)]
 enum Instruction {
     ConstLiteral(Value),
@@ -32,8 +32,9 @@ enum Instruction {
     Breakif(String, Box<Instruction>), //Label, Cond
     Loop(String, Box<Vec<Instruction>>, Box<Instruction>), // Label, instructions, Breaking point
     Meta(Box<Vec<Instruction>>),
-    E_Q(Box<Instruction>, Box<Instruction>),
-    PrintCell()
+    EQ(Box<Instruction>, Box<Instruction>),
+    PrintCell(),
+    PrintAbsCell()
 }
 impl Instruction {
     fn compile(&self, params: &mut Vec<String>) -> String {
@@ -164,7 +165,7 @@ impl Instruction {
                     .join("\n;; Meta");
                 compiled_instructions
             }
-            Instruction::E_Q(lhs, rhs) => format!(
+            Instruction::EQ(lhs, rhs) => format!(
                 "{}\n        {}\n        i32.eq",
                 lhs.compile(params),
                 rhs.compile(params)
@@ -177,6 +178,15 @@ impl Instruction {
                 );
                 let cell_value = Instruction::LoadMem(Box::new(cell_location));
                 format!("{}\n         call $log", cell_value.compile(params))
+            }
+            Instruction::PrintAbsCell() => {
+                let ptr = Instruction::GetLocal("ptr".to_string());
+                let cell_location = Instruction::MulConsts(
+                    Box::new(ptr),
+                    Box::new(Instruction::ConstLiteral(Value::Int(32))),
+                );
+                let cell_value = Instruction::LoadMem(Box::new(cell_location));
+                format!("{}\n         call $absLog", cell_value.compile(params))
             }
         }
     }
@@ -220,7 +230,7 @@ impl<'g> Global<'g> {
             .collect::<Vec<String>>()
             .join("\n");
         format!(
-            "(module (memory {mem})\n{}\n)",
+            "(module (func $log (import \"env\" \"log\") (param i32))\n(func $absLog (import \"env\" \"absLog\") (param i32)) (memory {mem})\n{}\n)",
             compiled_functions,
             mem = self.memory,
         )
@@ -254,7 +264,7 @@ fn parse_block(mut remaining_source: &[u8]) -> (Vec<Instruction>, &[u8]) {
                     Box::new(Instruction::ConstLiteral(Value::Int(32))),
                 );
                 let cell_value = Instruction::LoadMem(Box::new(cell_location));
-                let cell_value_eq_to_0 = Instruction::E_Q(
+                let cell_value_eq_to_0 = Instruction::EQ(
                     Box::new(cell_value),
                     Box::new(Instruction::ConstLiteral(Value::Int(0))),
                 );
@@ -276,6 +286,7 @@ fn parse_block(mut remaining_source: &[u8]) -> (Vec<Instruction>, &[u8]) {
             }
             b']' => break,
             b'.' => Instruction::PrintCell(),
+            b':' => Instruction::PrintAbsCell(),
             // b'.' => Instruction::Output,
             // b',' => Instruction::Input,
             _ => continue,
@@ -302,24 +313,6 @@ fn bf2wasm(input: String) -> String {
     g.compile()
 }
 fn main() {
-    // plan
-
-    // tape is default initialized
-
-    // have pointer
-
-    // +  = (set_local $ptr (i32.add (get_local $ptr) (i32.const 1)))
-    // -  = (set_local $ptr (i32.sub (get_local $ptr) (i32.const 1)))
-
-    // loops
-    /*
-        (loop $label
-
-        br_if ;;
-    )
-
-    */
-    let i = "+-<.>";
-    // println!("{}", i);
+    let i = r#"++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."#;
     println!("{}", bf2wasm(i.to_string()));
 }

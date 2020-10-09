@@ -1,10 +1,31 @@
+<!DOCTYPE html>
+<html>
+
 <head>
     <script>
-        let x = 2;
+        let out = []
+        WebAssembly.instantiateStreaming(fetch('a.wasm'), {
+            env: {
+                log: (z) => {
+                    out.push(String.fromCharCode(z))
+                },
+                absLog: (z) => console.log(z)
 
+            },
+            memory: new WebAssembly.Memory({initial: 10, maximum: 20})
+        })
+            .then(obj => {
+                // Call an exported function:
+                obj.instance.exports.xmain();
+                
+                console.log(out.join``);
+            })
     </script>
 
 </head>
+
 <body>
     test
 </body>
+
+</html>
